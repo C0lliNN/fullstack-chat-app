@@ -3,7 +3,6 @@ package chat
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"log"
 	"time"
@@ -20,6 +19,18 @@ const (
 	socketPingMessage  = 9
 )
 
+// Connection A representation of the network connection between the client and chat
+type Connection interface {
+	SetWriteDeadline(time.Time) error
+	SetReadLimit(int64)
+	SetReadDeadline(t time.Time) error
+	SetPongHandler(func(string) error)
+	ReadMessage() (int, []byte, error)
+	NextWriter(int) (io.WriteCloser, error)
+	WriteMessage(int, []byte) error
+	Close() error
+}
+
 type ClientConfig struct {
 	WriteWait time.Duration
 
@@ -35,6 +46,9 @@ type ClientConfig struct {
 	// ClientChannel channel used to send and receive message to/from the client connection
 	ClientChannel MessageChannel
 
+	// Marshaller interface used for unmarshaling the raw message into a struct
+	Marshaller MessageMarshaller
+
 	// Connection the client connection
 	Connection Connection
 
@@ -46,18 +60,6 @@ type ClientConfig struct {
 
 	// User represents actual chat user information behind the client
 	User User
-}
-
-// Connection A representation of the network connection between the client and chat
-type Connection interface {
-	SetWriteDeadline(time.Time) error
-	SetReadLimit(int64)
-	SetReadDeadline(t time.Time) error
-	SetPongHandler(func(string) error)
-	ReadMessage() (int, []byte, error)
-	NextWriter(int) (io.WriteCloser, error)
-	WriteMessage(int, []byte) error
-	Close() error
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -110,7 +112,7 @@ func (c *Client) ListenForConnectionWrites(ctx context.Context) {
 		log.Printf("Received Message: %s", string(rawMessage))
 
 		var req InsertMessageRequest
-		err = json.Unmarshal(rawMessage, &req)
+		err = c.Marshaller.Unmarshal(rawMessage, &req)
 		if err != nil {
 			log.Printf("[Unmarshal] error: %v", err)
 			break

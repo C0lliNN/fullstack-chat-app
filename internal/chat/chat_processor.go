@@ -25,7 +25,7 @@ type IDGenerator interface {
 
 type MessageMarshaller interface {
 	Marshal(data interface{}) ([]byte, error)
-	Unmarshal(data interface{}) ([]byte, error)
+	Unmarshal(data []byte, v interface{}) error
 }
 
 type ProcessorConfig struct {
@@ -33,6 +33,7 @@ type ProcessorConfig struct {
 	ChatRepository    ChatRepository
 	CodeGenerator     CodeGenerator
 	IDGenerator       IDGenerator
+	Marshaller        MessageMarshaller
 }
 
 type ChatProcessor struct {
@@ -109,6 +110,7 @@ func (p *ChatProcessor) newChatRoom(chat Chat) *ChatRoom {
 	chatRoom := NewChatRoom(RoomConfig{
 		IDGenerator: p.IDGenerator,
 		Repository:  p.MessageRepository,
+		Marshaler:   p.Marshaller,
 		Chat:        chat,
 	})
 

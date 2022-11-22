@@ -3,6 +3,7 @@ package main
 import (
 	"c0llinn/fullstack-chat-app/internal/chat"
 	"c0llinn/fullstack-chat-app/internal/generator"
+	"c0llinn/fullstack-chat-app/internal/marshaler"
 	"c0llinn/fullstack-chat-app/internal/persistence"
 	"c0llinn/fullstack-chat-app/internal/server"
 	"context"
@@ -15,7 +16,7 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URI")))
@@ -28,14 +29,17 @@ func main() {
 	chatRepo := persistence.NewChatRepository(database.Collection("chats"))
 	messageRepo := persistence.NewMessageRepository(database.Collection("messages"))
 
-	idGenerator := generator.UUIDGenerator{}
-	codeGenerator := generator.CodeGenerator{}
+	idGenerator := generator.NewUUIDGenerator()
+	codeGenerator := generator.NewCodeGenerator()
+
+	marshaller := marshaler.NewJSONMarshaller()
 
 	processor := chat.NewChatProcessor(chat.ProcessorConfig{
 		IDGenerator:       idGenerator,
 		CodeGenerator:     codeGenerator,
 		ChatRepository:    chatRepo,
 		MessageRepository: messageRepo,
+		Marshaller:        marshaller,
 	})
 
 	server := server.NewServer(*processor, websocket.Upgrader{

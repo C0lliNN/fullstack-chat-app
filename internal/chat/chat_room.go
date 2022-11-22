@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 )
 
@@ -13,6 +12,7 @@ type RoomConfig struct {
 	IDGenerator      IDGenerator
 	Chat             Chat
 	BroadcastChannel MessageChannel
+	Marshaler        MessageMarshaller
 }
 
 type ChatRoom struct {
@@ -42,7 +42,7 @@ func (r *ChatRoom) HandleNewMessage(ctx context.Context, req InsertMessageReques
 	}
 	log.Println("New message saved successfully")
 
-	rawMessage, err := json.Marshal(m)
+	rawMessage, err := r.Marshaler.Marshal(m)
 	if err != nil {
 		return err
 	}
@@ -60,6 +60,7 @@ func (r *ChatRoom) HandleUserConnected(ctx context.Context, userName string, con
 	client := NewChatClient(ClientConfig{
 		ClientChannel:    make(MessageChannel),
 		Connection:       connection,
+		Marshaller:       r.Marshaler,
 		OnMessageHandler: r.HandleNewMessage,
 		User:             User{ID: r.IDGenerator.NewID(), Name: userName},
 	})
