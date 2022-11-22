@@ -56,7 +56,7 @@ type ClientConfig struct {
 	OnMessageHandler func(ctx context.Context, req InsertMessageRequest) error
 
 	// OnMessageHandler code to be processed when a new message is detected
-	OnDisconnectedHandler func(ctx context.Context, client *Client) error
+	OnDisconnectedHandler func(ctx context.Context, userId string)
 
 	// User represents actual chat user information behind the client
 	User User
@@ -92,7 +92,7 @@ func NewChatClient(c ClientConfig) *Client {
 func (c *Client) ListenForConnectionWrites(ctx context.Context) {
 	defer func() {
 		log.Println("[ListenForConnectionWrites] Terminating client connection")
-		c.OnDisconnectedHandler(ctx, c)
+		c.OnDisconnectedHandler(ctx, c.User.ID)
 	}()
 
 	c.Connection.SetReadLimit(int64(c.MaxMessageSize))
@@ -136,7 +136,7 @@ func (c *Client) ListenForClientChannelWrites(ctx context.Context) {
 	defer func() {
 		ticker.Stop()
 		log.Println("[ListenForClientChannelWrites] Terminating client connection")
-		c.OnDisconnectedHandler(ctx, c)
+		c.OnDisconnectedHandler(ctx, c.User.ID)
 	}()
 
 	for {

@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"log"
+	"sync"
 )
 
 type MessageChannel chan []byte
@@ -18,6 +19,7 @@ type RoomConfig struct {
 type ChatRoom struct {
 	RoomConfig
 	clients map[*Client]bool
+	mutex   sync.Mutex
 }
 
 func NewChatRoom(c RoomConfig) *ChatRoom {
@@ -30,6 +32,9 @@ type InsertMessageRequest struct {
 }
 
 func (r *ChatRoom) HandleNewMessage(ctx context.Context, req InsertMessageRequest) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	m := Message{
 		ID:      r.IDGenerator.NewID(),
 		Content: req.Content,
@@ -57,12 +62,16 @@ func (r *ChatRoom) HandleNewMessage(ctx context.Context, req InsertMessageReques
 }
 
 func (r *ChatRoom) HandleUserConnected(ctx context.Context, userName string, connection Connection) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	client := NewChatClient(ClientConfig{
-		ClientChannel:    make(MessageChannel),
-		Connection:       connection,
-		Marshaller:       r.Marshaler,
-		OnMessageHandler: r.HandleNewMessage,
-		User:             User{ID: r.IDGenerator.NewID(), Name: userName},
+		ClientChannel:         make(MessageChannel),
+		Connection:            connection,
+		Marshaller:            r.Marshaler,
+		OnMessageHandler:      r.HandleNewMessage,
+		OnDisconnectedHandler: r.HandleUserDisconnected,
+		User:                  User{ID: r.IDGenerator.NewID(), Name: userName},
 	})
 
 	r.clients[client] = true
@@ -74,6 +83,9 @@ func (r *ChatRoom) HandleUserConnected(ctx context.Context, userName string, con
 }
 
 func (r *ChatRoom) HandleUserDisconnected(ctx context.Context, userId string) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	for client := range r.clients {
 		if client.User.ID == userId {
 			client.Connection.Close()
@@ -86,5 +98,8 @@ func (r *ChatRoom) HandleUserDisconnected(ctx context.Context, userId string) {
 }
 
 func (r *ChatRoom) Empty() bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	return len(r.clients) == 0
 }
