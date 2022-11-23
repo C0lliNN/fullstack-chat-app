@@ -174,3 +174,7 @@ func (c *Client) ListenForClientChannelWrites(ctx context.Context) {
 		}
 	}
 }
+
+func (c *Client) Close() error {
+	return c.Connection.Close()
+}

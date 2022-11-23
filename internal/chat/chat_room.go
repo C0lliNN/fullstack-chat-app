@@ -88,7 +88,7 @@ func (r *ChatRoom) HandleUserDisconnected(ctx context.Context, userId string) {
 
 	for client := range r.clients {
 		if client.User.ID == userId {
-			client.Connection.Close()
+			client.Close()
 			delete(r.clients, client)
 			ctx.Done()
 			log.Println("Client disconnected")
@@ -102,4 +102,13 @@ func (r *ChatRoom) Empty() bool {
 	defer r.mutex.Unlock()
 
 	return len(r.clients) == 0
+}
+
+func (r *ChatRoom) Close() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	for client := range r.clients {
+		client.Close()
+	}
 }

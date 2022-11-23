@@ -129,3 +129,9 @@ func (p *ChatProcessor) cleanEmptyChats() {
 		}
 	}
 }
+
+func (p *ChatProcessor) Shutdown() {
+	for chat := range p.chats {
+		chat.Close()
+	}
+}

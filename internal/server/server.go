@@ -2,26 +2,34 @@ package server
 
 import (
 	"c0llinn/fullstack-chat-app/internal/chat"
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 )
 
-type Server struct {
-	processor chat.ChatProcessor
-	upgrader  websocket.Upgrader
+type Config struct {
+	Processor *chat.ChatProcessor
+	Upgrader  websocket.Upgrader
+	Port int
 }
 
-func NewServer(processor chat.ChatProcessor, upgrader websocket.Upgrader) *Server {
-	return &Server{processor: processor, upgrader: upgrader}
+type Server struct {
+	Config
+	server *http.Server
+}
+
+func NewServer(c Config) *Server {
+	return &Server{Config: c}
 }
 
 func (s *Server) Start() {
 	http.HandleFunc("/chats", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			chat, err := s.processor.NewChat(r.Context())
+			chat, err := s.Processor.NewChat(r.Context())
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Println(err)
@@ -36,13 +44,13 @@ func (s *Server) Start() {
 			chatCode := query.Get("code")
 			userName := query.Get("user")
 
-			conn, err := s.upgrader.Upgrade(w, r, nil)
+			conn, err := s.Upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				log.Println(err)
 				return
 			}
 
-			err = s.processor.JoinChat(r.Context(), chat.JoinChatRequest{
+			err = s.Processor.JoinChat(r.Context(), chat.JoinChatRequest{
 				ChatCode:   chatCode,
 				UserName:   userName,
 				Connection: conn,
@@ -55,8 +63,18 @@ func (s *Server) Start() {
 		}
 	})
 
-	err := http.ListenAndServe(":3000", nil)
-	if err != nil {
+	s.server = &http.Server{
+		Addr: fmt.Sprintf(":%d", s.Port),
+	}
+
+	log.Printf("Server starting on port %d", s.Port)
+	
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	log.Println("Shutting down server")
+	return s.server.Shutdown(ctx)
 }
