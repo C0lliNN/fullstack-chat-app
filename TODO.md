@@ -5,7 +5,7 @@
 * [x] Create Encoder Interfaces
 * [x] Fix Race Conditions
 * [x] Handle Disconnect Gracefully
-* [ ] Create some unit tests
 * [ ] Test with 3 clients
 * [ ] Search for Websocket Libs in the Frontend
 * [ ] Search how to update react state from Websocket stream
+* [ ] Create automated tests
