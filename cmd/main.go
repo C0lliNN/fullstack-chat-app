@@ -8,6 +8,7 @@ import (
 	"c0llinn/fullstack-chat-app/internal/server"
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -47,9 +48,10 @@ func main() {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
+		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
-	server := server.NewServer(server.Config{Processor: processor, Upgrader: upgrader, Port: 3000})
+	server := server.NewServer(server.Config{Processor: processor, Upgrader: upgrader, Port: 3001})
 
 	shutdown := make(chan struct{})
 	go func() {
@@ -58,8 +60,8 @@ func main() {
 		<-sigint
 
 		log.Println("Cleaning up resources")
-		
-		ctx, cancel = context.WithTimeout(context.Background(), time.Second * 20)
+
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*20)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {

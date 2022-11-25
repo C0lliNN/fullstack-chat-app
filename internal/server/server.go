@@ -28,6 +28,8 @@ func NewServer(c Config) *Server {
 
 func (s *Server) Start() {
 	http.HandleFunc("/chats", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+
 		if r.Method == http.MethodPost {
 			chat, err := s.Processor.NewChat(r.Context())
 			if err != nil {

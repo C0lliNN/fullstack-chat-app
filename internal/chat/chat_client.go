@@ -1,7 +1,6 @@
 package chat
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"log"
@@ -108,7 +107,6 @@ func (c *Client) ListenForConnectionWrites(ctx context.Context) {
 			log.Printf("[ReadMessage] error: %v", err)
 			break
 		}
-		rawMessage = bytes.TrimSpace(bytes.Replace(rawMessage, newline, space, -1))
 		log.Printf("Received Message: %s", string(rawMessage))
 
 		var req InsertMessageRequest
